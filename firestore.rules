@@ -1,0 +1,115 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Fields:
+//   - uid: string (required) - Firebase Auth UID
+//   - email: string (required) - User email
+//   - displayName: string (optional)
+//   - role: string (required) - admin, lawyer, student, guest
+//   - subscriptionStatus: string (optional) - active, expired, none
+//   - createdAt: timestamp (required)
+//
+// Collection: books
+// Fields:
+//   - title: string (required)
+//   - author: string (optional)
+//   - category: string (required)
+//   - edition: string (optional)
+//   - year: string (optional)
+//   - isPremium: bool (required)
+//
+// Collection: cases
+// Fields:
+//   - title: string (required)
+//   - caseNo: string (required)
+//   - court: string (required)
+//   - date: string (optional)
+//   - judges: string (optional)
+//   - summary: string (optional)
+//   - type: string (optional)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "alihassanchand24@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() < 100 &&
+             data.role in ['lawyer', 'student', 'guest', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidBook(data) {
+      return data.keys().hasAll(['title', 'category', 'isPremium']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.category is string && data.category.size() < 50 &&
+             data.isPremium is bool;
+    }
+
+    function isValidCase(data) {
+      return data.keys().hasAll(['title', 'caseNo', 'court']) &&
+             data.title is string && data.title.size() < 300 &&
+             data.caseNo is string && data.caseNo.size() < 100 &&
+             data.court is string && data.court.size() < 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) &&
+                    request.resource.data.role == resource.data.role; // Role cannot be changed by user
+      allow delete: if isAdmin();
+    }
+
+    // Books Collection
+    match /books/{bookId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Cases Collection
+    match /cases/{caseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Bookmarks Subcollection
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

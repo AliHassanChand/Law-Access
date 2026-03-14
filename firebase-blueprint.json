@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with profile and subscription details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "lawyer", "student", "guest"] },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "expired", "none"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "LawBook": {
+      "title": "Law Book",
+      "description": "Digitized law book metadata and content reference",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "edition": { "type": "string" },
+        "year": { "type": "string" },
+        "contentUrl": { "type": "string", "format": "uri" },
+        "isPremium": { "type": "boolean" }
+      },
+      "required": ["title", "category"]
+    },
+    "CaseLaw": {
+      "title": "Case Law",
+      "description": "Judicial judgment or case law entry",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "caseNo": { "type": "string" },
+        "court": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "judges": { "type": "string" },
+        "summary": { "type": "string" },
+        "fullText": { "type": "string" },
+        "type": { "type": "string", "enum": ["Landmark", "Constitutional", "Recent"] }
+      },
+      "required": ["title", "caseNo", "court"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "User saved resource",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "resourceType": { "type": "string", "enum": ["book", "case"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "resourceId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/books/{bookId}": {
+      "schema": "LawBook",
+      "description": "Collection of digitized law books"
+    },
+    "/cases/{caseId}": {
+      "schema": "CaseLaw",
+      "description": "Collection of judicial judgments"
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": "Bookmark",
+      "description": "User-specific bookmarks"
+    }
+  }
+}
